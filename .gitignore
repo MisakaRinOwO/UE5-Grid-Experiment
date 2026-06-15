@@ -1,0 +1,26 @@
+# Unreal Engine generated folders
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+
+# Compiled objects
+*.o
+*.obj
+*.pdb
+
+# Visual Studio
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Rider / JetBrains
+.idea/
+*.DotSettings.user
+
+# OS
+.DS_Store
+Thumbs.db
