@@ -119,13 +119,77 @@ void AGridManager::HandleGridInteraction()
 
 	FGridCoord HitCoord;
 
-	if (TryGetLookAtGridCoord(HitCoord))
-	{
-		ToggleObstacle(HitCoord);
+	if (bRaytraceByCursor) {
+		if (TryGetLookAtGridCoordCursor(HitCoord))
+		{
+			ToggleObstacle(HitCoord);
+		}
 	}
+	else {
+		if (TryGetLookAtGridCoordCamera(HitCoord))
+		{
+			ToggleObstacle(HitCoord);
+		}
+	}
+
 }
 
-bool AGridManager::TryGetLookAtGridCoord(FGridCoord& OutCoord) const
+bool AGridManager::TryGetLookAtGridCoordCursor(FGridCoord& OutCoord) const
+{
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+
+	if (!PlayerController || !GetWorld())
+	{
+		return false;
+	}
+
+	float MouseX, MouseY;
+	if (!PlayerController->GetMousePosition(MouseX, MouseY))
+	{
+		return false;
+	}
+
+	FVector WorldLocation, WorldDirection;
+	if (!PlayerController->DeprojectScreenPositionToWorld(MouseX, MouseY, WorldLocation, WorldDirection))
+	{
+		return false;
+	}
+
+	const FVector TraceStart = WorldLocation;
+	const FVector TraceEnd = TraceStart + WorldDirection * TraceDistance;
+
+	FHitResult HitResult;
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		TraceStart,
+		TraceEnd,
+		ECC_Visibility
+	);
+
+	if (bDrawInteractionTrace)
+	{
+		const FColor TraceColor = bHit ? FColor::Blue : FColor::Red;
+		DrawDebugLine(
+			GetWorld(),
+			TraceStart,
+			TraceEnd,
+			TraceColor,
+			false,
+			1.0f,
+			0,
+			2.0f
+		);
+	}
+
+	if (!bHit)
+	{
+		return false;
+	}
+
+	return WorldToGrid(HitResult.ImpactPoint, OutCoord);
+}
+
+bool AGridManager::TryGetLookAtGridCoordCamera(FGridCoord& OutCoord) const
 {
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
 

@@ -74,6 +74,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid")
 	TArray<FGridCell> Cells;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid|Control")
+	bool bRaytraceByCursor = true;
+
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	void InitializeGrid();
 
@@ -92,10 +95,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Grid|Interaction")
 	bool ToggleObstacle(FGridCoord Coord);
 
+
 private:
 	void DrawGridDebug() const;
 
 	void HandleGridInteraction();
 
-	bool TryGetLookAtGridCoord(FGridCoord& OutCoord) const;
+	bool TryGetLookAtGridCoordCursor(FGridCoord& OutCoord) const;
+
+	bool TryGetLookAtGridCoordCamera(FGridCoord& OutCoord) const;
 };
