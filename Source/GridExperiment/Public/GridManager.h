@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/SceneComponent.h"
+#include "InputCoreTypes.h"
 #include "GridManager.generated.h"
 
 USTRUCT(BlueprintType)
@@ -58,8 +59,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
 	float CellSize = 100.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
 	bool bDrawDebugGrid = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
+	float TraceDistance = 10000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
+	FKey ToggleObstacleKey = EKeys::LeftMouseButton;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
+	bool bDrawInteractionTrace = true;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid")
 	TArray<FGridCell> Cells;
@@ -79,6 +89,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	bool WorldToGrid(FVector WorldLocation, FGridCoord& OutCoord) const;
 
+	UFUNCTION(BlueprintCallable, Category = "Grid|Interaction")
+	bool ToggleObstacle(FGridCoord Coord);
+
 private:
 	void DrawGridDebug() const;
+
+	void HandleGridInteraction();
+
+	bool TryGetLookAtGridCoord(FGridCoord& OutCoord) const;
 };

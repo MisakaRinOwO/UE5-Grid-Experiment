@@ -1,5 +1,7 @@
 #include "GridManager.h"
 #include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
 
 AGridManager::AGridManager()
 {
@@ -19,6 +21,8 @@ void AGridManager::BeginPlay()
 void AGridManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	HandleGridInteraction();
 
 	if (bDrawDebugGrid)
 	{
@@ -78,6 +82,97 @@ bool AGridManager::WorldToGrid(FVector WorldLocation, FGridCoord& OutCoord) cons
 	OutCoord.Y = FMath::FloorToInt(LocalLocation.Y / CellSize);
 
 	return IsValidCoord(OutCoord);
+}
+
+bool AGridManager::ToggleObstacle(FGridCoord Coord)
+{
+	if (!IsValidCoord(Coord))
+	{
+		return false;
+	}
+
+	const int32 Index = CoordToIndex(Coord);
+
+	if (!Cells.IsValidIndex(Index))
+	{
+		return false;
+	}
+
+	Cells[Index].bBlocked = !Cells[Index].bBlocked;
+
+	return true;
+}
+
+void AGridManager::HandleGridInteraction()
+{
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	if (!PlayerController->WasInputKeyJustPressed(ToggleObstacleKey))
+	{
+		return;
+	}
+
+	FGridCoord HitCoord;
+
+	if (TryGetLookAtGridCoord(HitCoord))
+	{
+		ToggleObstacle(HitCoord);
+	}
+}
+
+bool AGridManager::TryGetLookAtGridCoord(FGridCoord& OutCoord) const
+{
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+
+	if (!PlayerController || !GetWorld())
+	{
+		return false;
+	}
+
+	FVector ViewLocation;
+	FRotator ViewRotation;
+
+	PlayerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
+
+	const FVector TraceStart = ViewLocation;
+	const FVector TraceEnd = TraceStart + ViewRotation.Vector() * TraceDistance;
+
+	FHitResult HitResult;
+
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		TraceStart,
+		TraceEnd,
+		ECC_Visibility
+	);
+
+	if (bDrawInteractionTrace)
+	{
+		const FColor TraceColor = bHit ? FColor::Blue : FColor::Red;
+
+		DrawDebugLine(
+			GetWorld(),
+			TraceStart,
+			TraceEnd,
+			TraceColor,
+			false,
+			1.0f,
+			0,
+			2.0f
+		);
+	}
+
+	if (!bHit)
+	{
+		return false;
+	}
+
+	return WorldToGrid(HitResult.ImpactPoint, OutCoord);
 }
 
 void AGridManager::DrawGridDebug() const
