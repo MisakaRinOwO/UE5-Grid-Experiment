@@ -104,7 +104,7 @@ bool AGridManager::ToggleObstacle(FGridCoord Coord)
 }
 
 /*
-Per-tick handler
+* Per-tick handler
 */
 void AGridManager::HandleGridInteraction()
 {
@@ -146,6 +146,12 @@ void AGridManager::HandleGridInteraction()
 		return;
 	}
 }
+
+/* 
+* Event driven handler implemented in PlayerController blueprint
+*/
+
+
 /*
 Interaction Helper
 */
@@ -160,7 +166,7 @@ bool AGridManager::TryGetInteractionCoord(FGridCoord& OutCoord) const
 }
 
 /*
-Start/Goal coord setter
+* Start/Goal coord setter
 */
 bool AGridManager::SetStartCoord(FGridCoord Coord)
 {
@@ -193,7 +199,7 @@ bool AGridManager::SetGoalCoord(FGridCoord Coord)
 }
 
 /*
-Walkable check
+* Walkable check
 */
 bool AGridManager::IsWalkableCoord(FGridCoord Coord) const
 {
@@ -213,7 +219,7 @@ bool AGridManager::IsWalkableCoord(FGridCoord Coord) const
 }
 
 /*
-Cursor and camera center raytrace method
+* Cursor and camera center raytrace method
 */
 bool AGridManager::TryGetLookAtGridCoordCursor(FGridCoord& OutCoord) const
 {
@@ -321,7 +327,7 @@ bool AGridManager::TryGetLookAtGridCoordCamera(FGridCoord& OutCoord) const
 }
 
 /*
-A* helper, 4-directional neighbor check
+* A* helper, 4-directional neighbor check
 */
 void AGridManager::GetNeighbors(FGridCoord Coord, TArray<FGridCoord>& OutNeighbors) const
 {
@@ -356,7 +362,7 @@ void AGridManager::GetNeighbors(FGridCoord Coord, TArray<FGridCoord>& OutNeighbo
 /// ------------ A* helpers ------------
 
 /*
-Heuristic value calculation(Manhatan distance)
+* Heuristic value calculation(Manhatan distance)
 */
 float AGridManager::GetHeuristicCost(FGridCoord From, FGridCoord To) const
 {
@@ -403,7 +409,7 @@ bool AGridManager::IsCoordInCurrentPath(FGridCoord Coord) const
 /// ------------------------------------
 
 /*
-A* pathfinding algorithm
+* A* pathfinding algorithm
 */
 bool AGridManager::FindPath()
 {
@@ -525,7 +531,7 @@ bool AGridManager::FindPath()
 }
 
 /*
-Visual debug
+* Visual debug
 */
 void AGridManager::DrawGridDebug() const
 {
