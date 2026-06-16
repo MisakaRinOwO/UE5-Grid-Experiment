@@ -33,6 +33,26 @@ struct FGridCell
 	float MoveCost = 1.0f;
 };
 
+/*
+Temp internal structure, no need to expose as USTRUCT
+*/
+struct FGridPathNode
+{
+	int32 CellIndex = -1;
+	int32 ParentIndex = -1;
+
+	float GCost = 0.0f;
+	float HCost = 0.0f;
+
+	bool bOpen = false;
+	bool bClosed = false;
+
+	float GetFCost() const
+	{
+		return GCost + HCost;
+	}
+};
+
 UCLASS()
 class GRIDEXPERIMENT_API AGridManager : public AActor
 {
@@ -68,6 +88,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
 	FKey ToggleObstacleKey = EKeys::LeftMouseButton;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
+	FKey SetStartKey = EKeys::One;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
+	FKey SetGoalKey = EKeys::Two;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
+	FKey RunPathfindingKey = EKeys::SpaceBar;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
 	bool bDrawInteractionTrace = true;
 
@@ -76,6 +105,21 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid|Control")
 	bool bRaytraceByCursor = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pathfinding")
+	bool bHasStartCoord = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pathfinding")
+	bool bHasGoalCoord = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pathfinding")
+	FGridCoord StartCoord;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pathfinding")
+	FGridCoord GoalCoord;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pathfinding")
+	TArray<FGridCoord> CurrentPath;
 
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	void InitializeGrid();
@@ -95,6 +139,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Grid|Interaction")
 	bool ToggleObstacle(FGridCoord Coord);
 
+	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
+	bool SetStartCoord(FGridCoord Coord);
+
+	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
+	bool SetGoalCoord(FGridCoord Coord);
+
+	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
+	bool FindPath();
+
+	UFUNCTION(BlueprintPure, Category = "Grid")
+	bool IsWalkableCoord(FGridCoord Coord) const;
 
 private:
 	void DrawGridDebug() const;
@@ -104,4 +159,14 @@ private:
 	bool TryGetLookAtGridCoordCursor(FGridCoord& OutCoord) const;
 
 	bool TryGetLookAtGridCoordCamera(FGridCoord& OutCoord) const;
+
+	bool TryGetInteractionCoord(FGridCoord& OutCoord) const;
+
+	void GetNeighbors(FGridCoord Coord, TArray<FGridCoord>& OutNeighbors) const;
+
+	float GetHeuristicCost(FGridCoord From, FGridCoord To) const;
+
+	void ReconstructPath(const TArray<FGridPathNode>& PathNodes, int32 GoalIndex);
+
+	bool IsCoordInCurrentPath(FGridCoord Coord) const;
 };
