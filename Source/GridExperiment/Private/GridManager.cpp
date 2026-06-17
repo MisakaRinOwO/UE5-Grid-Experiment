@@ -22,7 +22,7 @@ void AGridManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	HandleGridInteraction();
+	//HandleGridInteraction();
 
 	if (bDrawDebugGrid)
 	{

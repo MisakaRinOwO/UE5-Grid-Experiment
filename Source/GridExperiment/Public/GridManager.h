@@ -151,9 +151,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Grid")
 	bool IsWalkableCoord(FGridCoord Coord) const;
 
-private:
+	UFUNCTION(BlueprintCallable, Category = "Grid|Debug")
 	void DrawGridDebug() const;
 
+private:
 	void HandleGridInteraction();
 
 	bool TryGetLookAtGridCoordCursor(FGridCoord& OutCoord) const;
