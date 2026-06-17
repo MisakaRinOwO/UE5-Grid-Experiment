@@ -106,6 +106,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
 	FKey RunPathfindingKey = EKeys::SpaceBar;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
+	bool bEnablePerTickFindPath = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
 	bool bDrawInteractionTrace = true;
 
@@ -117,6 +120,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pathfinding")
 	bool bHasStartCoord = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pathfinding")
+	bool bEnable8Directional = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pathfinding")
 	bool bHasGoalCoord = false;
@@ -176,7 +182,11 @@ public:
 	float CellCostTextScale = 1.2f;
 
 private:
-	void HandleGridInteraction();
+	FGridCoord PreviousCoord;
+
+	bool IsPreviousCoord(FGridCoord Coord) const;
+
+	bool HandleGridInteraction();
 
 	bool TryGetLookAtGridCoordCursor(FGridCoord& OutCoord) const;
 

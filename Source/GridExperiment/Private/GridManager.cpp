@@ -24,7 +24,13 @@ void AGridManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	//HandleGridInteraction();
+	if (bEnablePerTickFindPath)
+	{
+		if (HandleGridInteraction())
+		{
+			FindPath();
+		}
+	}
 
 	if (bDrawDebugGrid)
 	{
@@ -92,6 +98,11 @@ bool AGridManager::WorldToGrid(FVector WorldLocation, FGridCoord& OutCoord) cons
 	OutCoord.Y = FMath::FloorToInt(LocalLocation.Y / CellSize);
 
 	return IsValidCoord(OutCoord);
+}
+
+bool AGridManager::IsPreviousCoord(FGridCoord Coord) const
+{
+	return (Coord.X == PreviousCoord.X && Coord.Y == PreviousCoord.Y);
 }
 
 /*
@@ -190,45 +201,36 @@ bool AGridManager::CycleGridCost(FGridCoord Coord)
 /*
 * Per-tick handler
 */
-void AGridManager::HandleGridInteraction()
+bool AGridManager::HandleGridInteraction()
 {
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
 
 	if (!PlayerController)
 	{
-		return;
+		return false;
 	}
 
 	if (PlayerController->WasInputKeyJustPressed(RunPathfindingKey))
 	{
 		FindPath();
-		return;
+		return false;
 	}
 
 	FGridCoord HitCoord;
 
 	if (!TryGetInteractionCoord(HitCoord))
 	{
-		return;
+		return false;
 	}
 
-	if (PlayerController->WasInputKeyJustPressed(ToggleObstacleKey))
-	{
-		ToggleObstacle(HitCoord);
-		return;
-	}
-
-	if (PlayerController->WasInputKeyJustPressed(SetStartKey))
-	{
-		SetStartCoord(HitCoord);
-		return;
-	}
-
-	if (PlayerController->WasInputKeyJustPressed(SetGoalKey))
+	if (!IsPreviousCoord(HitCoord))
 	{
 		SetGoalCoord(HitCoord);
-		return;
+		PreviousCoord = HitCoord;
+		return true;
 	}
+
+	return false;
 }
 
 /* 
