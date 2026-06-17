@@ -31,8 +31,11 @@ struct FGridCell
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
 	float MoveCost = 1.0f;
-};
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+	int32 MoveCostListIndex = 0;
+};
+	
 /*
 Temp internal structure, no need to expose as USTRUCT
 */
@@ -84,6 +87,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
 	float TraceDistance = 10000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Terrain")
+	TArray<float> MoveCostList;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Terrain")
+	float BlockedMoveCost = 99999.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
 	FKey ToggleObstacleKey = EKeys::LeftMouseButton;
@@ -139,6 +148,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Grid|Interaction")
 	bool ToggleObstacle(FGridCoord Coord);
 
+	UFUNCTION(BlueprintCallable, Category = "Grid|Interaction")
+	bool CycleGridCost(FGridCoord Coord);
+
 	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
 	bool SetStartCoord(FGridCoord Coord);
 
@@ -153,6 +165,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Grid|Debug")
 	void DrawGridDebug() const;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
+	bool bDrawCellCostText = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
+	float CellCostTextZOffset = 40.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
+	float CellCostTextScale = 1.2f;
 
 private:
 	void HandleGridInteraction();

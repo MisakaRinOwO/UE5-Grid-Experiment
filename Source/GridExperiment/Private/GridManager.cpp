@@ -9,6 +9,8 @@ AGridManager::AGridManager()
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	RootComponent = SceneRoot;
+
+	MoveCostList = { 1.0f, 2.0f, 3.0f };
 }
 
 void AGridManager::BeginPlay()
@@ -30,10 +32,16 @@ void AGridManager::Tick(float DeltaTime)
 	}
 }
 
+
+/*
+* Internal Helper
+*/
 void AGridManager::InitializeGrid()
 {
 	Cells.Empty();
 	Cells.Reserve(GridWidth * GridHeight);
+
+	const float DefaultMoveCost = MoveCostList.Num() > 0 ? MoveCostList[0] : 1.0f;
 
 	for (int32 Y = 0; Y < GridHeight; ++Y)
 	{
@@ -45,6 +53,8 @@ void AGridManager::InitializeGrid()
 			NewCell.Coord.Y = Y;
 			NewCell.bBlocked = false;
 			NewCell.MoveCost = 1.0f;
+			NewCell.MoveCostListIndex = 0;
+			NewCell.MoveCost = DefaultMoveCost;
 
 			Cells.Add(NewCell);
 		}
@@ -84,6 +94,19 @@ bool AGridManager::WorldToGrid(FVector WorldLocation, FGridCoord& OutCoord) cons
 	return IsValidCoord(OutCoord);
 }
 
+/*
+* Interaction Helper
+*/
+bool AGridManager::TryGetInteractionCoord(FGridCoord& OutCoord) const
+{
+	if (bRaytraceByCursor)
+	{
+		return TryGetLookAtGridCoordCursor(OutCoord);
+	}
+
+	return TryGetLookAtGridCoordCamera(OutCoord);
+}
+
 bool AGridManager::ToggleObstacle(FGridCoord Coord)
 {
 	if (!IsValidCoord(Coord))
@@ -100,6 +123,67 @@ bool AGridManager::ToggleObstacle(FGridCoord Coord)
 
 	Cells[Index].bBlocked = !Cells[Index].bBlocked;
 
+	return true;
+}
+
+bool AGridManager::CycleGridCost(FGridCoord Coord)
+{
+	if (!IsValidCoord(Coord))
+	{
+		return false;
+	}
+
+	const int32 Index = CoordToIndex(Coord);
+
+	if (!Cells.IsValidIndex(Index))
+	{
+		return false;
+	}
+
+	if (MoveCostList.Num() == 0)
+	{
+		return false;
+	}
+
+	FGridCell& Cell = Cells[Index];
+
+	// If currently blocked, unblock and reset to first cost.
+	if (Cell.bBlocked)
+	{
+		Cell.bBlocked = false;
+		Cell.MoveCostListIndex = 0;
+		Cell.MoveCost = MoveCostList[0];
+
+		CurrentPath.Empty();
+		return true;
+	}
+
+	// Safety reset if the stored index is no longer valid after editing the list in Editor.
+	if (!MoveCostList.IsValidIndex(Cell.MoveCostListIndex))
+	{
+		Cell.MoveCostListIndex = 0;
+		Cell.MoveCost = MoveCostList[0];
+
+		CurrentPath.Empty();
+		return true;
+	}
+
+	// If this is the last cost entry, turn this cell into a blockage.
+	if (Cell.MoveCostListIndex >= MoveCostList.Num() - 1)
+	{
+		Cell.bBlocked = true;
+		Cell.MoveCostListIndex = 0;
+		Cell.MoveCost = BlockedMoveCost;
+
+		CurrentPath.Empty();
+		return true;
+	}
+
+	// Otherwise move to the next cost entry.
+	Cell.MoveCostListIndex++;
+	Cell.MoveCost = MoveCostList[Cell.MoveCostListIndex];
+
+	CurrentPath.Empty();
 	return true;
 }
 
@@ -150,20 +234,6 @@ void AGridManager::HandleGridInteraction()
 /* 
 * Event driven handler implemented in PlayerController blueprint
 */
-
-
-/*
-Interaction Helper
-*/
-bool AGridManager::TryGetInteractionCoord(FGridCoord& OutCoord) const
-{
-	if (bRaytraceByCursor)
-	{
-		return TryGetLookAtGridCoordCursor(OutCoord);
-	}
-
-	return TryGetLookAtGridCoordCamera(OutCoord);
-}
 
 /*
 * Start/Goal coord setter
@@ -572,6 +642,26 @@ void AGridManager::DrawGridDebug() const
 			0,
 			2.0f
 		);
+
+		if (bDrawCellCostText)
+		{
+			const FVector TextLocation = Center + FVector(0.0f, 0.0f, CellCostTextZOffset);
+
+			const FString CostText = Cell.bBlocked
+				? TEXT("X")
+				: FString::Printf(TEXT("%.0f"), Cell.MoveCost);
+
+			DrawDebugString(
+				GetWorld(),
+				TextLocation,
+				CostText,
+				nullptr,
+				FColor::White,
+				0.0f,
+				true,
+				CellCostTextScale
+			);
+		}
 	}
 
 	// Draw current path as connected lines
