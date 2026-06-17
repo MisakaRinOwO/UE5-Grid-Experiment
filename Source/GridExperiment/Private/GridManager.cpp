@@ -552,11 +552,6 @@ void AGridManager::DrawGridDebug() const
 			CellColor = FColor::Red;
 		}
 
-		if (IsCoordInCurrentPath(Cell.Coord))
-		{
-			CellColor = FColor::Blue;
-		}
-
 		if (bHasStartCoord && Cell.Coord.X == StartCoord.X && Cell.Coord.Y == StartCoord.Y)
 		{
 			CellColor = FColor::Yellow;
@@ -576,6 +571,24 @@ void AGridManager::DrawGridDebug() const
 			0.0f,
 			0,
 			2.0f
+		);
+	}
+
+	// Draw current path as connected lines
+	for (int32 i = 0; i < CurrentPath.Num() - 1; ++i)
+	{
+		const FVector StartWorld = GridToWorld(CurrentPath[i]) + FVector(0.0f, 0.0f, 30.0f);
+		const FVector EndWorld = GridToWorld(CurrentPath[i + 1]) + FVector(0.0f, 0.0f, 30.0f);
+
+		DrawDebugLine(
+			GetWorld(),
+			StartWorld,
+			EndWorld,
+			FColor::Blue,
+			false,
+			0.0f,
+			0,
+			8.0f
 		);
 	}
 }
