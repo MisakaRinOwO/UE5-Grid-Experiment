@@ -26,10 +26,7 @@ void AGridManager::Tick(float DeltaTime)
 
 	if (bEnableHoverPathPreview)
 	{
-		if (HandleGridInteraction())
-		{
-			FindPath();
-		}
+		UpdateHoverPathPreview();
 	}
 
 	if (bDrawDebugGrid)
@@ -135,6 +132,7 @@ bool AGridManager::ToggleObstacle(FGridCoord Coord)
 	}
 
 	Cells[Index].bBlocked = !Cells[Index].bBlocked;
+	bHasPreviousCoord = false;
 
 	return true;
 }
@@ -167,7 +165,7 @@ bool AGridManager::CycleGridCost(FGridCoord Coord)
 		Cell.MoveCostListIndex = 0;
 		Cell.MoveCost = MoveCostList[0];
 
-		CurrentPath.Empty();
+		ResetGridCache();
 		return true;
 	}
 
@@ -177,7 +175,7 @@ bool AGridManager::CycleGridCost(FGridCoord Coord)
 		Cell.MoveCostListIndex = 0;
 		Cell.MoveCost = MoveCostList[0];
 
-		CurrentPath.Empty();
+		ResetGridCache();
 		return true;
 	}
 
@@ -188,7 +186,7 @@ bool AGridManager::CycleGridCost(FGridCoord Coord)
 		Cell.MoveCostListIndex = 0;
 		Cell.MoveCost = BlockedMoveCost;
 
-		CurrentPath.Empty();
+		ResetGridCache();
 		return true;
 	}
 
@@ -196,7 +194,7 @@ bool AGridManager::CycleGridCost(FGridCoord Coord)
 	Cell.MoveCostListIndex++;
 	Cell.MoveCost = MoveCostList[Cell.MoveCostListIndex];
 
-	CurrentPath.Empty();
+	ResetGridCache();
 	return true;
 }
 
@@ -272,7 +270,7 @@ bool AGridManager::SetStartCoord(FGridCoord Coord)
 	StartCoord = Coord;
 	bHasStartCoord = true;
 
-	CurrentPath.Empty();
+	ResetGridCache();
 
 	return true;
 }
@@ -447,16 +445,20 @@ void AGridManager::GetNeighbors(FGridCoord Coord, TArray<FGridCoord>& OutNeighbo
 	const FGridCoord DownRight{ Coord.X + 1, Coord.Y - 1 };
 	const FGridCoord DownLeft{ Coord.X - 1, Coord.Y - 1 };
 
-	if (IsWalkableCoord(UpRight)) OutNeighbors.Add(UpRight);
-	if (IsWalkableCoord(UpLeft)) OutNeighbors.Add(UpLeft);
-	if (IsWalkableCoord(DownRight)) OutNeighbors.Add(DownRight);
-	if (IsWalkableCoord(DownLeft)) OutNeighbors.Add(DownLeft);
+	if (IsWalkableCoord(UpRight) && (IsWalkableCoord(Right) || IsWalkableCoord(Up))) OutNeighbors.Add(UpRight);
+	if (IsWalkableCoord(UpLeft) && (IsWalkableCoord(Left) || IsWalkableCoord(Up))) OutNeighbors.Add(UpLeft);
+	if (IsWalkableCoord(DownRight) && (IsWalkableCoord(Right) || IsWalkableCoord(Down))) OutNeighbors.Add(DownRight);
+	if (IsWalkableCoord(DownLeft) && (IsWalkableCoord(Left) || IsWalkableCoord(Down))) OutNeighbors.Add(DownLeft);
 }
 
 /// ------------ A* helpers ------------
-
 /*
-* Heuristic value calculation(Manhatan distance)
+* Heuristic value calculation.
+* 4-directional: Manhattan distance.
+* 8-directional: Chebyshev distance.
+*/
+/*
+* Manhatan distance
 */
 //float AGridManager::GetHeuristicCost(FGridCoord From, FGridCoord To) const
 //{
@@ -464,7 +466,7 @@ void AGridManager::GetNeighbors(FGridCoord Coord, TArray<FGridCoord>& OutNeighbo
 //}
 
 /*
-* Heuristic value calculation(Manhatan distance)
+* Chebyshev distance
 */
 float AGridManager::GetHeuristicCost(FGridCoord From, FGridCoord To) const
 {
@@ -532,6 +534,148 @@ bool AGridManager::IsCoordInCurrentPath(FGridCoord Coord) const
 }
 
 /// ------------------------------------
+/// 
+/// ------------ Reachable range helpers ------------
+bool AGridManager::IsCoordInReachableCells(FGridCoord Coord) const
+{
+	for (const FGridCoord& ReachableCoord : ReachableCells)
+	{
+		if (ReachableCoord.X == Coord.X && ReachableCoord.Y == Coord.Y)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void AGridManager::ClearReachableCells()
+{
+	ReachableCells.Empty();
+}
+
+bool AGridManager::IsSameCoord(FGridCoord A, FGridCoord B) const
+{
+	return A.X == B.X && A.Y == B.Y;
+}
+
+bool AGridManager::DoesCurrentPathEndAt(FGridCoord Coord) const
+{
+	if (CurrentPath.Num() == 0)
+	{
+		return false;
+	}
+
+	return IsSameCoord(CurrentPath.Last(), Coord);
+}
+
+void AGridManager::ClearCurrentPathPreview()
+{
+	CurrentPath.Empty();
+	CurrentPathCost = 0.0f;
+	bHasGoalCoord = false;
+}
+
+bool AGridManager::RefreshReachableCells()
+{
+	ClearReachableCells();
+	ClearCurrentPathPreview();
+
+	bHasPreviousCoord = false;
+
+	if (!bHasStartCoord)
+	{
+		return false;
+	}
+
+	TArray<FGridCoord> NewReachableCells;
+
+	if (!FindReachableCells(StartCoord, MovementBudget, NewReachableCells))
+	{
+		return false;
+	}
+
+	ReachableCells = NewReachableCells;
+	return true;
+}
+
+void AGridManager::UpdateHoverPathPreview()
+{
+	if (!bHasStartCoord)
+	{
+		ClearCurrentPathPreview();
+		return;
+	}
+
+	FGridCoord HoverCoord;
+
+	if (!TryGetInteractionCoord(HoverCoord))
+	{
+		ClearCurrentPathPreview();
+		return;
+	}
+
+	if (IsPreviousCoord(HoverCoord))
+	{
+		return;
+	}
+
+	PreviousCoord = HoverCoord;
+	bHasPreviousCoord = true;
+
+	if (!IsWalkableCoord(HoverCoord))
+	{
+		ClearCurrentPathPreview();
+		return;
+	}
+
+	if (!IsCoordInReachableCells(HoverCoord))
+	{
+		ClearCurrentPathPreview();
+		return;
+	}
+
+	GoalCoord = HoverCoord;
+	bHasGoalCoord = true;
+
+	if (!FindPath())
+	{
+		ClearCurrentPathPreview();
+		return;
+	}
+
+	CurrentPathCost = GetPathCost(CurrentPath);
+
+	if (!DoesCurrentPathEndAt(HoverCoord))
+	{
+		ClearCurrentPathPreview();
+		return;
+	}
+
+	if (CurrentPathCost > MovementBudget)
+	{
+		ClearCurrentPathPreview();
+		return;
+	}
+}
+
+void AGridManager::ResetGridCache()
+{
+	ClearCurrentPathPreview();
+	bHasPreviousCoord = false;
+
+	if (bHasStartCoord)
+	{
+		RefreshReachableCells();
+	}
+
+	if (bDrawDebugGrid)
+	{
+		DrawGridDebug();
+	}
+}
+
+/// ------------------------------------
 
 /*
 * A* pathfinding algorithm
@@ -539,6 +683,7 @@ bool AGridManager::IsCoordInCurrentPath(FGridCoord Coord) const
 bool AGridManager::FindPath()
 {
 	CurrentPath.Empty();
+	CurrentPathCost = 0.0f;
 
 	if (!bHasStartCoord || !bHasGoalCoord)
 	{
@@ -612,6 +757,7 @@ bool AGridManager::FindPath()
 		if (CurrentIndex == GoalIndex)
 		{
 			ReconstructPath(PathNodes, GoalIndex);
+			CurrentPathCost = GetPathCost(CurrentPath);
 			return true;
 		}
 
@@ -656,6 +802,128 @@ bool AGridManager::FindPath()
 }
 
 /*
+* Dijkstra-style expansion, given start coord and movement budget, find reachable goals
+*/
+bool AGridManager::FindReachableCells(
+	FGridCoord Start,
+	float InMovementBudget,
+	TArray<FGridCoord>& OutReachableCells
+)
+{
+	ReachableCells.Empty();
+	OutReachableCells.Empty();
+
+	if (InMovementBudget < 0.0f)
+	{
+		return false;
+	}
+
+	if (!IsWalkableCoord(Start))
+	{
+		return false;
+	}
+
+	const int32 StartIndex = CoordToIndex(Start);
+
+	if (!Cells.IsValidIndex(StartIndex))
+	{
+		return false;
+	}
+
+	const float LargeCost = 1000000000.0f;
+
+	TArray<float> BestCosts;
+	BestCosts.Init(LargeCost, Cells.Num());
+
+	TArray<bool> bClosed;
+	bClosed.Init(false, Cells.Num());
+
+	TArray<bool> bInOpenList;
+	bInOpenList.Init(false, Cells.Num());
+
+	TArray<int32> OpenList;
+
+	BestCosts[StartIndex] = 0.0f;
+	OpenList.Add(StartIndex);
+	bInOpenList[StartIndex] = true;
+
+	while (OpenList.Num() > 0)
+	{
+		int32 BestOpenListPosition = 0;
+		int32 CurrentIndex = OpenList[0];
+
+		for (int32 i = 1; i < OpenList.Num(); ++i)
+		{
+			const int32 CandidateIndex = OpenList[i];
+
+			if (BestCosts[CandidateIndex] < BestCosts[CurrentIndex])
+			{
+				CurrentIndex = CandidateIndex;
+				BestOpenListPosition = i;
+			}
+		}
+
+		OpenList.RemoveAtSwap(BestOpenListPosition);
+		bInOpenList[CurrentIndex] = false;
+
+		if (!Cells.IsValidIndex(CurrentIndex))
+		{
+			continue;
+		}
+
+		if (bClosed[CurrentIndex])
+		{
+			continue;
+		}
+
+		bClosed[CurrentIndex] = true;
+
+		// This cell is reachable because it was only added if its cost was within budget.
+		ReachableCells.Add(Cells[CurrentIndex].Coord);
+
+		TArray<FGridCoord> Neighbors;
+		GetNeighbors(Cells[CurrentIndex].Coord, Neighbors);
+
+		for (const FGridCoord& NeighborCoord : Neighbors)
+		{
+			const int32 NeighborIndex = CoordToIndex(NeighborCoord);
+
+			if (!Cells.IsValidIndex(NeighborIndex))
+			{
+				continue;
+			}
+
+			if (bClosed[NeighborIndex])
+			{
+				continue;
+			}
+
+			const float NewCost = BestCosts[CurrentIndex] + Cells[NeighborIndex].MoveCost;
+
+			if (NewCost > InMovementBudget)
+			{
+				continue;
+			}
+
+			if (NewCost < BestCosts[NeighborIndex])
+			{
+				BestCosts[NeighborIndex] = NewCost;
+
+				if (!bInOpenList[NeighborIndex])
+				{
+					OpenList.Add(NeighborIndex);
+					bInOpenList[NeighborIndex] = true;
+				}
+			}
+		}
+	}
+
+	OutReachableCells = ReachableCells;
+
+	return ReachableCells.Num() > 0;
+}
+
+/*
 * Visual debug
 */
 void AGridManager::DrawGridDebug() const
@@ -677,14 +945,20 @@ void AGridManager::DrawGridDebug() const
 			CellColor = FColor::Red;
 		}
 
-		if (bHasStartCoord && Cell.Coord.X == StartCoord.X && Cell.Coord.Y == StartCoord.Y)
+		if (bHasStartCoord && IsSameCoord(Cell.Coord, StartCoord))
 		{
 			CellColor = FColor::Yellow;
 		}
 
-		if (bHasGoalCoord && Cell.Coord.X == GoalCoord.X && Cell.Coord.Y == GoalCoord.Y)
+		if (bHasGoalCoord && IsSameCoord(Cell.Coord, GoalCoord))
 		{
 			CellColor = FColor::Purple;
+		}
+
+		// reachable overlay
+		if (IsCoordInReachableCells(Cell.Coord))
+		{
+			CellColor = FColor::Cyan;
 		}
 
 		DrawDebugBox(
@@ -720,20 +994,23 @@ void AGridManager::DrawGridDebug() const
 	}
 
 	// Draw current path as connected lines
-	for (int32 i = 0; i < CurrentPath.Num() - 1; ++i)
+	if (bHasGoalCoord && DoesCurrentPathEndAt(GoalCoord))
 	{
-		const FVector StartWorld = GridToWorld(CurrentPath[i]) + FVector(0.0f, 0.0f, 30.0f);
-		const FVector EndWorld = GridToWorld(CurrentPath[i + 1]) + FVector(0.0f, 0.0f, 30.0f);
+		for (int32 i = 0; i < CurrentPath.Num() - 1; ++i)
+		{
+			const FVector StartWorld = GridToWorld(CurrentPath[i]) + FVector(0.0f, 0.0f, 30.0f);
+			const FVector EndWorld = GridToWorld(CurrentPath[i + 1]) + FVector(0.0f, 0.0f, 30.0f);
 
-		DrawDebugLine(
-			GetWorld(),
-			StartWorld,
-			EndWorld,
-			FColor::Blue,
-			false,
-			0.0f,
-			0,
-			8.0f
-		);
+			DrawDebugLine(
+				GetWorld(),
+				StartWorld,
+				EndWorld,
+				FColor::Blue,
+				false,
+				0.0f,
+				0,
+				8.0f
+			);
+		}
 	}
 }

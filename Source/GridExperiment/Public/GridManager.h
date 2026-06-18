@@ -139,6 +139,21 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pathfinding")
 	float CurrentPathCost = 0.0f;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|Movement")
+	TArray<FGridCoord> ReachableCells;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	float MovementBudget = 6.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
+	bool bDrawCellCostText = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
+	float CellCostTextZOffset = 40.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
+	float CellCostTextScale = 1.2f;
+
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	void InitializeGrid();
 
@@ -175,17 +190,23 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Grid")
 	bool IsWalkableCoord(FGridCoord Coord) const;
 
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	void ResetGridCache();
+
 	UFUNCTION(BlueprintCallable, Category = "Grid|Debug")
 	void DrawGridDebug() const;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
-	bool bDrawCellCostText = true;
+	UFUNCTION(BlueprintCallable, Category = "Grid|Movement")
+	bool FindReachableCells(FGridCoord Start, float InMovementBudget, TArray<FGridCoord>& OutReachableCells);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
-	float CellCostTextZOffset = 40.0f;
+	UFUNCTION(BlueprintPure, Category = "Grid|Movement")
+	bool IsCoordInReachableCells(FGridCoord Coord) const;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
-	float CellCostTextScale = 1.2f;
+	UFUNCTION(BlueprintCallable, Category = "Grid|Movement")
+	void ClearReachableCells();
+
+	UFUNCTION(BlueprintCallable, Category = "Grid|Movement")
+	bool RefreshReachableCells();
 
 private:
 	FGridCoord PreviousCoord;
@@ -193,8 +214,6 @@ private:
 	bool bHasPreviousCoord = false;
 
 	bool IsPreviousCoord(FGridCoord Coord) const;
-
-	bool HandleGridInteraction();
 
 	bool TryGetLookAtGridCoordCursor(FGridCoord& OutCoord) const;
 
@@ -209,4 +228,13 @@ private:
 	void ReconstructPath(const TArray<FGridPathNode>& PathNodes, int32 GoalIndex);
 
 	bool IsCoordInCurrentPath(FGridCoord Coord) const;
+
+	bool IsSameCoord(FGridCoord A, FGridCoord B) const;
+
+	bool DoesCurrentPathEndAt(FGridCoord Coord) const;
+
+	void ClearCurrentPathPreview();
+
+	void UpdateHoverPathPreview();
+
 };
