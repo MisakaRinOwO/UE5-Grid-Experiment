@@ -107,7 +107,7 @@ public:
 	FKey RunPathfindingKey = EKeys::SpaceBar;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Interaction")
-	bool bEnablePerTickFindPath = false;
+	bool bEnableHoverPathPreview = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
 	bool bDrawInteractionTrace = true;
@@ -135,6 +135,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pathfinding")
 	TArray<FGridCoord> CurrentPath;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pathfinding")
+	float CurrentPathCost = 0.0f;
 
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	void InitializeGrid();
@@ -166,6 +169,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
 	bool FindPath();
 
+	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
+	float GetPathCost(const TArray<FGridCoord>& Path) const;
+
 	UFUNCTION(BlueprintPure, Category = "Grid")
 	bool IsWalkableCoord(FGridCoord Coord) const;
 
@@ -183,6 +189,8 @@ public:
 
 private:
 	FGridCoord PreviousCoord;
+
+	bool bHasPreviousCoord = false;
 
 	bool IsPreviousCoord(FGridCoord Coord) const;
 

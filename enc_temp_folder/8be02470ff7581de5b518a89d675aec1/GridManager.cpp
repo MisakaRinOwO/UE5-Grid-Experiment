@@ -135,7 +135,6 @@ bool AGridManager::ToggleObstacle(FGridCoord Coord)
 	}
 
 	Cells[Index].bBlocked = !Cells[Index].bBlocked;
-	bHasPreviousCoord = false;
 
 	return true;
 }
@@ -169,7 +168,6 @@ bool AGridManager::CycleGridCost(FGridCoord Coord)
 		Cell.MoveCost = MoveCostList[0];
 
 		CurrentPath.Empty();
-		bHasPreviousCoord = false;
 		return true;
 	}
 
@@ -180,7 +178,6 @@ bool AGridManager::CycleGridCost(FGridCoord Coord)
 		Cell.MoveCost = MoveCostList[0];
 
 		CurrentPath.Empty();
-		bHasPreviousCoord = false;
 		return true;
 	}
 
@@ -192,7 +189,6 @@ bool AGridManager::CycleGridCost(FGridCoord Coord)
 		Cell.MoveCost = BlockedMoveCost;
 
 		CurrentPath.Empty();
-		bHasPreviousCoord = false;
 		return true;
 	}
 
@@ -201,7 +197,6 @@ bool AGridManager::CycleGridCost(FGridCoord Coord)
 	Cell.MoveCost = MoveCostList[Cell.MoveCostListIndex];
 
 	CurrentPath.Empty();
-	bHasPreviousCoord = false;
 	return true;
 }
 
@@ -278,7 +273,6 @@ bool AGridManager::SetStartCoord(FGridCoord Coord)
 	bHasStartCoord = true;
 
 	CurrentPath.Empty();
-	bHasPreviousCoord = false;
 
 	return true;
 }
@@ -453,20 +447,16 @@ void AGridManager::GetNeighbors(FGridCoord Coord, TArray<FGridCoord>& OutNeighbo
 	const FGridCoord DownRight{ Coord.X + 1, Coord.Y - 1 };
 	const FGridCoord DownLeft{ Coord.X - 1, Coord.Y - 1 };
 
-	if (IsWalkableCoord(UpRight) && IsWalkableCoord(Right) && IsWalkableCoord(Up)) OutNeighbors.Add(UpRight);
-	if (IsWalkableCoord(UpLeft) && IsWalkableCoord(Left) && IsWalkableCoord(Up)) OutNeighbors.Add(UpLeft);
-	if (IsWalkableCoord(DownRight) && IsWalkableCoord(Right) && IsWalkableCoord(Down)) OutNeighbors.Add(DownRight);
-	if (IsWalkableCoord(DownLeft) && IsWalkableCoord(Left) && IsWalkableCoord(Down)) OutNeighbors.Add(DownLeft);
+	if (IsWalkableCoord(UpRight)) OutNeighbors.Add(UpRight);
+	if (IsWalkableCoord(UpLeft)) OutNeighbors.Add(UpLeft);
+	if (IsWalkableCoord(DownRight)) OutNeighbors.Add(DownRight);
+	if (IsWalkableCoord(DownLeft)) OutNeighbors.Add(DownLeft);
 }
 
 /// ------------ A* helpers ------------
+
 /*
-* Heuristic value calculation.
-* 4-directional: Manhattan distance.
-* 8-directional: Chebyshev distance.
-*/
-/*
-* Manhatan distance
+* Heuristic value calculation(Manhatan distance)
 */
 //float AGridManager::GetHeuristicCost(FGridCoord From, FGridCoord To) const
 //{
@@ -474,7 +464,7 @@ void AGridManager::GetNeighbors(FGridCoord Coord, TArray<FGridCoord>& OutNeighbo
 //}
 
 /*
-* Chebyshev distance
+* Heuristic value calculation(Manhatan distance)
 */
 float AGridManager::GetHeuristicCost(FGridCoord From, FGridCoord To) const
 {
@@ -549,7 +539,6 @@ bool AGridManager::IsCoordInCurrentPath(FGridCoord Coord) const
 bool AGridManager::FindPath()
 {
 	CurrentPath.Empty();
-	CurrentPathCost = 0.0f;
 
 	if (!bHasStartCoord || !bHasGoalCoord)
 	{
@@ -623,7 +612,6 @@ bool AGridManager::FindPath()
 		if (CurrentIndex == GoalIndex)
 		{
 			ReconstructPath(PathNodes, GoalIndex);
-			CurrentPathCost = GetPathCost(CurrentPath);
 			return true;
 		}
 
