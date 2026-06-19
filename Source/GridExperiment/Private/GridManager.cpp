@@ -58,6 +58,8 @@ void AGridManager::InitializeGrid()
 			NewCell.MoveCost = 1.0f;
 			NewCell.MoveCostListIndex = 0;
 			NewCell.MoveCost = DefaultMoveCost;
+			NewCell.bIsOccupied = false;
+			NewCell.OccupyingCharacter = nullptr;
 
 			Cells.Add(NewCell);
 		}
@@ -75,6 +77,70 @@ bool AGridManager::IsValidCoord(FGridCoord Coord) const
 int32 AGridManager::CoordToIndex(FGridCoord Coord) const
 {
 	return Coord.Y * GridWidth + Coord.X;
+}
+
+bool AGridManager::TryGetGridCell(FGridCoord Coord, FGridCell& OutCell) const
+{
+	if (!IsValidCoord(Coord))
+	{
+		return false;
+	}
+
+	const int32 Index = CoordToIndex(Coord);
+
+	if (!Cells.IsValidIndex(Index))
+	{
+		return false;
+	}
+
+	OutCell = Cells[Index];
+	return true;
+}
+
+void AGridManager::ToggleGridCellOccupied(FGridCell& GridCell)
+{
+	GridCell.bIsOccupied = !GridCell.bIsOccupied;
+
+	if (!GridCell.bIsOccupied)
+	{
+		GridCell.OccupyingCharacter = nullptr;
+	}
+
+	if (IsValidCoord(GridCell.Coord))
+	{
+		const int32 Index = CoordToIndex(GridCell.Coord);
+
+		if (Cells.IsValidIndex(Index))
+		{
+			Cells[Index].bIsOccupied = GridCell.bIsOccupied;
+			Cells[Index].OccupyingCharacter = GridCell.OccupyingCharacter;
+			ResetGridCache();
+		}
+	}
+}
+
+void AGridManager::AssignGridCellCharacterAndUpdateOccupancy(FGridCell& GridCell, ACharacter* NewCharacter)
+{
+	GridCell.OccupyingCharacter = NewCharacter;
+	GridCell.bIsOccupied = NewCharacter != nullptr;
+
+	if (IsValidCoord(GridCell.Coord))
+	{
+		const int32 Index = CoordToIndex(GridCell.Coord);
+
+		if (Cells.IsValidIndex(Index))
+		{
+			Cells[Index].OccupyingCharacter = GridCell.OccupyingCharacter;
+			Cells[Index].bIsOccupied = GridCell.bIsOccupied;
+			ResetGridCache();
+		}
+	}
+}
+
+void AGridManager::GetCharacterOnCell(const FGridCell& GridCell, bool& bOutIsOccupied, ACharacter*& OutCharacter) const
+{
+	bOutIsOccupied = GridCell.bIsOccupied;
+	OutCharacter = GridCell.OccupyingCharacter;
 }
 
 FVector AGridManager::GridToWorld(FGridCoord Coord) const
@@ -271,7 +337,7 @@ bool AGridManager::IsWalkableCoord(FGridCoord Coord) const
 		return false;
 	}
 
-	return !Cells[Index].bBlocked;
+	return !Cells[Index].bBlocked && !Cells[Index].bIsOccupied;
 }
 
 /*

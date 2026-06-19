@@ -6,6 +6,8 @@
 #include "InputCoreTypes.h"
 #include "GridManager.generated.h"
 
+class ACharacter;
+
 USTRUCT(BlueprintType)
 struct FGridCoord
 {
@@ -34,6 +36,12 @@ struct FGridCell
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
 	int32 MoveCostListIndex = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+	bool bIsOccupied = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+	TObjectPtr<ACharacter> OccupyingCharacter = nullptr;
 };
 	
 /*
@@ -162,6 +170,18 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Grid")
 	int32 CoordToIndex(FGridCoord Coord) const;
+
+	UFUNCTION(BlueprintPure, Category = "Grid")
+	bool TryGetGridCell(FGridCoord Coord, FGridCell& OutCell) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	void ToggleGridCellOccupied(UPARAM(ref) FGridCell& GridCell);
+
+	UFUNCTION(BlueprintCallable, Category = "Grid")
+	void AssignGridCellCharacterAndUpdateOccupancy(UPARAM(ref) FGridCell& GridCell, ACharacter* NewCharacter);
+
+	UFUNCTION(BlueprintPure, Category = "Grid")
+	void GetCharacterOnCell(const FGridCell& GridCell, bool& bOutIsOccupied, ACharacter*& OutCharacter) const;
 
 	UFUNCTION(BlueprintPure, Category = "Grid")
 	FVector GridToWorld(FGridCoord Coord) const;

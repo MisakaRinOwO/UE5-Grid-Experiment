@@ -4,6 +4,8 @@ Build/
 DerivedDataCache/
 Intermediate/
 Saved/
+Content/StarterContent
+Content/LevelPrototyping
 .vs/
 
 # Compiled objects
