@@ -719,9 +719,7 @@ void AGridManager::RemoveStartAndGoalCoord()
 	bHasGoalCoord = false;
 	StartCoord = FGridCoord();
 	GoalCoord = FGridCoord();
-	ReachableCells.Empty();
-	CurrentPath.Empty();
-
+	
 	ResetGridCache();
 }
 

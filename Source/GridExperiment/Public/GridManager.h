@@ -199,6 +199,9 @@ public:
 	bool SetStartCoord(FGridCoord Coord);
 
 	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
+	void RemoveStartAndGoalCoord();
+
+	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
 	bool SetGoalCoord(FGridCoord Coord);
 
 	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
