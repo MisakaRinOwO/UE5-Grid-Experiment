@@ -24,7 +24,7 @@ void AGridManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (bEnableHoverPathPreview)
+	if (bEnableHoverPathPreview && !bEnableAbilityPreview)
 	{
 		UpdateHoverPathPreview();
 	}
@@ -973,6 +973,36 @@ bool AGridManager::FindReachableCells(
 	return ReachableCells.Num() > 0;
 }
 
+bool AGridManager::FindCellsInRange(FGridCoord Origin, int32 Range, TArray<FGridCoord>& OutCells) const
+{
+	OutCells.Empty();
+
+	if (!IsValidCoord(Origin))
+	{
+		return false;
+	}
+
+	if (Range < 0)
+	{
+		return false;
+	}
+
+	for (const FGridCell& Cell : Cells)
+	{
+		if (!IsValidCoord(Cell.Coord))
+		{
+			continue;
+		}
+
+		if (IsCoordInRange(Origin, Cell.Coord, Range))
+		{
+			OutCells.Add(Cell.Coord);
+		}
+	}
+
+	return OutCells.Num() > 0;
+}
+
 /*
 * Visual debug
 */
@@ -1012,6 +1042,26 @@ void AGridManager::DrawGridDebug() const
 			CellColor = FColor::Purple;
 		}
 
+		if (bEnableAbilityPreview && IsCoordInAbilityAttackRange(Cell.Coord))
+		{
+			CellColor = FColor::Silver;
+		}
+
+		if (bEnableAbilityPreview && IsCoordInAbilityEffect(Cell.Coord))
+		{
+			CellColor = FColor::Magenta;
+		}
+
+		if (bEnableAbilityPreview && bHasAbilityOriginCoord && IsSameCoord(Cell.Coord, AbilityOriginCoord))
+		{
+			CellColor = FColor::Yellow;
+		}
+
+		if (bEnableAbilityPreview && bHasAbilityTargetCoord && IsSameCoord(Cell.Coord, AbilityTargetCoord))
+		{
+			CellColor = FColor::Purple;
+		}
+
 		DrawDebugBox(
 			GetWorld(),
 			Center,
@@ -1045,7 +1095,7 @@ void AGridManager::DrawGridDebug() const
 	}
 
 	// Draw current path as connected lines
-	if (bHasGoalCoord && DoesCurrentPathEndAt(GoalCoord))
+	if (bHasGoalCoord && DoesCurrentPathEndAt(GoalCoord) && !bEnableAbilityPreview)
 	{
 		for (int32 i = 0; i < CurrentPath.Num() - 1; ++i)
 		{
@@ -1064,4 +1114,90 @@ void AGridManager::DrawGridDebug() const
 			);
 		}
 	}
+}
+
+/*
+* Ability helper
+*/
+bool AGridManager::UpdateAbilityPreview(
+	FGridCoord OriginCoord,
+	FGridCoord TargetCoord,
+	int32 AttackRange,
+	int32 EffectRange
+)
+{
+	ClearAbilityPreview();
+
+	if (!IsValidCoord(OriginCoord) || !IsValidCoord(TargetCoord))
+	{
+		return false;
+	}
+
+	AbilityOriginCoord = OriginCoord;
+	AbilityTargetCoord = TargetCoord;
+	bHasAbilityOriginCoord = true;
+
+	FindCellsInRange(OriginCoord, AttackRange, AbilityAttackRangeCells);
+
+	if (!IsCoordInRange(OriginCoord, TargetCoord, AttackRange))
+	{
+		bHasAbilityTargetCoord = false;
+		return false;
+	}
+
+	bHasAbilityTargetCoord = true;
+
+	FindCellsInRange(TargetCoord, EffectRange, AbilityEffectCells);
+
+	// EffectRange 0 should still highlight target cell.
+	if (EffectRange == 0 && IsValidCoord(TargetCoord))
+	{
+		AbilityEffectCells.Empty();
+		AbilityEffectCells.Add(TargetCoord);
+	}
+
+	return true;
+}
+
+void AGridManager::ClearAbilityPreview()
+{
+	bHasAbilityOriginCoord = false;
+	bHasAbilityTargetCoord = false;
+
+	AbilityAttackRangeCells.Empty();
+	AbilityEffectCells.Empty();
+}
+
+bool AGridManager::IsCoordInRange(FGridCoord Origin, FGridCoord Target, int32 Range) const
+{
+	const int32 DX = FMath::Abs(Origin.X - Target.X);
+	const int32 DY = FMath::Abs(Origin.Y - Target.Y);
+
+	return FMath::Max(DX, DY) <= Range;
+}
+
+bool AGridManager::IsCoordInAbilityAttackRange(FGridCoord Coord) const
+{
+	for (const FGridCoord& RangeCoord : AbilityAttackRangeCells)
+	{
+		if (IsSameCoord(RangeCoord, Coord))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool AGridManager::IsCoordInAbilityEffect(FGridCoord Coord) const
+{
+	for (const FGridCoord& EffectCoord : AbilityEffectCells)
+	{
+		if (IsSameCoord(EffectCoord, Coord))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }

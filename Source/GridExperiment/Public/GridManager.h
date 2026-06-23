@@ -162,6 +162,27 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Debug")
 	float CellCostTextScale = 1.2f;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|Ability")
+	bool bHasAbilityOriginCoord = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|Ability")
+	bool bHasAbilityTargetCoord = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|Ability")
+	FGridCoord AbilityOriginCoord;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|Ability")
+	FGridCoord AbilityTargetCoord;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|Ability")
+	TArray<FGridCoord> AbilityAttackRangeCells;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid|Ability")
+	TArray<FGridCoord> AbilityEffectCells;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid|Ability")
+	bool bEnableAbilityPreview = true;
+
 	UFUNCTION(BlueprintCallable, Category = "Grid")
 	void InitializeGrid();
 
@@ -231,6 +252,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Grid|Movement")
 	bool RefreshReachableCells();
 
+	UFUNCTION(BlueprintCallable, Category = "Grid|Ability")
+	bool FindCellsInRange(FGridCoord Origin, int32 Range, TArray<FGridCoord>& OutCells) const;
+
+	UFUNCTION(BlueprintPure, Category = "Grid|Ability")
+	bool IsCoordInRange(FGridCoord Origin, FGridCoord Target, int32 Range) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Grid|Ability")
+	void ClearAbilityPreview();
+
+	UFUNCTION(BlueprintCallable, Category = "Grid|Ability")
+	bool UpdateAbilityPreview(FGridCoord OriginCoord, FGridCoord TargetCoord, int32 AttackRange, int32 EffectRange);
+
 private:
 	FGridCoord PreviousCoord;
 
@@ -259,5 +292,9 @@ private:
 	void ClearCurrentPathPreview();
 
 	void UpdateHoverPathPreview();
+
+	bool IsCoordInAbilityAttackRange(FGridCoord Coord) const;
+
+	bool IsCoordInAbilityEffect(FGridCoord Coord) const;
 
 };
